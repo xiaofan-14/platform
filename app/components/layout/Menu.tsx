@@ -1,6 +1,6 @@
 'use client';
 
-import { MenuList } from '@/app/lib/menu';
+import { MenuList } from '@/app/lib/utils/menu';
 import { List, ListItem, ListItemButton, ListItemText, Box } from '@mui/material';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
