@@ -1,13 +1,24 @@
 // 使用单例模式封装 Prisma 客户端
-import { PrismaClient } from '@/app/generated/prisma/client';
+import { PrismaClient } from "@/app/generated/prisma/client";
+import { PrismaPg } from '@prisma/adapter-pg'
+
 
 let prismaInstance: PrismaClient | null = null;
+
+import 'dotenv/config'
+
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL,
+})
+
 
 // 创建 Prisma 实例的工厂函数
 function createPrismaClient(): PrismaClient {
   if (!prismaInstance) {
     // PrismaClient 构造函数需要传入配置对象（即使是空对象）
-    prismaInstance = new PrismaClient({} as any);
+    prismaInstance = new PrismaClient({
+      adapter,
+    });
 
     // 添加错误处理
     prismaInstance.$on('error' as never, (e: any) => {
