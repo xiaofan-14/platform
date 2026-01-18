@@ -1,6 +1,6 @@
 "use client"
 
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   Alert,
   Box,
@@ -43,6 +43,8 @@ export default function Datalist() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  // 使用 Map 存储每个设备的定时器，避免内存泄漏
+  const timersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // 过滤设备列表
   const filteredDevices = useMemo(() => {
@@ -108,6 +110,9 @@ export default function Datalist() {
         status: data.data.status,
       };
       setDevices([...(devices || []), newDevice]);
+      // 注册后重新请求刷新列表
+      // 为新设备启动轮询
+    //   startPolling(newDevice.id);
 
       // 2秒后关闭对话框
       setTimeout(() => {
@@ -120,22 +125,96 @@ export default function Datalist() {
     }
   };
 
+  // 获取单个设备状态
+  const getDeviceStatus = useCallback(async (deviceId: string) => {
+    try {
+      const response = await fetch(`/api/device/${deviceId}`);
+      const data = await response.json();
+      
+      if (data.data) {
+        // 更新设备状态
+        setDevices((prevDevices) => {
+          if (!prevDevices) return prevDevices;
+          return prevDevices.map((device) =>
+            device.id === deviceId.toString()
+              ? {
+                  ...device,
+                  cpuUsage: data.data.cpuUsage,
+                  status: data.data.status,
+                }
+              : device
+          );
+        });
+      }
+    } catch (err) {
+      console.error('获取设备状态失败:', err);
+    }
+  }, []);
+
+  // 启动设备状态轮询
+  const startPolling = useCallback((deviceId: string) => {
+    // 首先检查是否有定时器，如果有，清除定时器
+    timersRef.current.get(deviceId) && clearTimeout(timersRef.current.get(deviceId));
+    // 如果没有创建一个闭包函数，在闭包中定时请求
+    const poll = async () => {
+        // 立即执行一次 获取状态
+        await getDeviceStatus(deviceId);
+        // 设置下一次轮询
+        const timer = setTimeout(() => {
+            poll();
+        }, 5000);
+        timersRef.current.set(deviceId, timer);
+    }
+    // 立即执行一次
+    poll();
+  }, [getDeviceStatus]);
+
+  // 停止设备状态轮询
+  const stopPolling = useCallback((deviceId: string) => {
+    const timer = timersRef.current.get(deviceId);
+    if (timer) {
+      clearTimeout(timer);
+      timersRef.current.delete(deviceId);
+    }
+  }, []);
+
+  // 停止所有轮询
+  const stopAllPolling = useCallback(() => {
+    timersRef.current.forEach((timer) => {
+      clearTimeout(timer);
+    });
+    timersRef.current.clear();
+  }, []);
+
+  // 获取设备列表
   const getDevices = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch('/api/device');
       const data = await response.json();
-      setDevices(data.data);
+      const deviceList = data.data || [];
+      setDevices(deviceList);
+      
+      // 为每个设备启动轮询
+      deviceList.forEach((device: Device) => {
+        startPolling(device.id.toString());
+      });
     } catch (err) {
       console.error('获取设备列表失败:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [startPolling]);
 
+  // 组件挂载时获取设备列表
   useEffect(() => {
     getDevices();
-  }, [getDevices]);
+
+    // 组件卸载时清理所有定时器
+    return () => {
+      stopAllPolling();
+    };
+  }, [getDevices, stopAllPolling]);
 
   return (
     <Box>
