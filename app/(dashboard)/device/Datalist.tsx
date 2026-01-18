@@ -26,6 +26,8 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
+import DownloadIcon from '@mui/icons-material/Download';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 // 设备数据类型
 interface Device {
@@ -43,6 +45,7 @@ export default function Datalist() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [openDownloadDialog, setOpenDownloadDialog] = useState(false);
   // 使用 Map 存储每个设备的定时器，避免内存泄漏
   const timersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
@@ -206,6 +209,10 @@ export default function Datalist() {
     }
   }, [startPolling]);
 
+  const handleCloseDownloadDialog = () => {
+    setOpenDownloadDialog(false);
+  };
+
   // 组件挂载时获取设备列表
   useEffect(() => {
     getDevices();
@@ -256,8 +263,8 @@ export default function Datalist() {
           </Button>
           <Button
             variant="contained"
-            startIcon={<AddIcon/>}
-            onClick={handleAdd}
+            startIcon={<DownloadIcon/>}
+            onClick={() => setOpenDownloadDialog(true)}
             size='small'
           >
             安装Agent
@@ -404,6 +411,69 @@ export default function Datalist() {
             {loading ? '注册中...' : '注册'}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      <Dialog open={openDownloadDialog} onClose={handleCloseDownloadDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>安装Agent</DialogTitle>
+        <DialogContent>
+          <Box sx={{pt: 2}}>
+            {/* 通过 location 获取 当前域名，显示一个复制 按钮，
+            前面使用 <code> 显示一个代码块 显示 当前域名/agent/install.sh */}
+            {success && (
+              <Alert severity="success" sx={{mb: 2}} onClose={() => setSuccess(null)}>
+                {success}
+              </Alert>
+            )}
+            {error && (
+              <Alert severity="error" sx={{mb: 2}} onClose={() => setError(null)}>
+                {error}
+              </Alert>
+            )}
+            <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
+              <Box
+                component="code"
+                sx={{
+                  display: 'inline-block',
+                  padding: '8px 12px',
+                  backgroundColor: '#000',
+                  color: '#fff',
+                  borderRadius: '4px',
+                  fontFamily: 'monospace',
+                  fontSize: '14px',
+                  whiteSpace: 'nowrap',
+                  flexGrow: 1,
+                  overflow: 'auto',
+                }}
+              >
+                {typeof window !== 'undefined' && `curl -sSL ${window.location.origin}/agent/install.sh | bash -s ${window.location.origin}/agent`}
+              </Box>
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={async () => {
+                  if (typeof window !== 'undefined') {
+                    const command = `curl -sSL ${window.location.origin}/agent/install.sh | bash -s ${window.location.origin}/agent`;
+                    try {
+                      await navigator.clipboard.writeText(command);
+                      // 复制成功提示
+                      setSuccess('已复制到剪贴板');
+                      setTimeout(() => setSuccess(null), 2000);
+                    } catch (err) {
+                      console.error('复制失败:', err);
+                      setError('复制失败，请手动复制');
+                    }
+                  }
+                }}
+                sx={{
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <ContentCopyIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          </Box>
+        </DialogContent>
       </Dialog>
     </Box>
   );
