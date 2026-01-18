@@ -19,3 +19,21 @@ model User {
   password  String
   createdAt DateTime @default(now())
 }
+
+// 设备状态枚举
+enum DeviceStatus {
+  online
+  offline
+}
+
+// 设备模型
+model Device {
+  id        Int          @id @default(autoincrement())
+  name      String       @unique // 设备唯一名称
+  cpuUsage  Float        @default(0) // CPU 占用率 (0-100)
+  status    DeviceStatus @default(offline) // 在线状态
+  createdAt DateTime     @default(now()) // 创建时间
+  updatedAt DateTime     @updatedAt // 更新时间
+
+  @@map("devices")
+}

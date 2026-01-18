@@ -8,4 +8,5 @@ export interface MenuItem {
 export const MenuList: MenuItem[] = [
   { label: '首页', path: '/' },
   { label: '登录', path: '/login' },
+  { label: '设备', path: '/device' },
 ]
