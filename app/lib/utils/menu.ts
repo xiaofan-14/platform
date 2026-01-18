@@ -10,3 +10,4 @@ export const MenuList: MenuItem[] = [
   { label: '登录', path: '/login' },
   { label: '设备', path: '/device' },
 ]
+// 014030

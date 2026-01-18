@@ -52,3 +52,11 @@ export async function GET(
     );
   }
 }
+
+export async function POST(request: Request) {
+    const { message } = await request.json() as { message: string }
+    
+    console.log(message)
+
+    return NextResponse.json({message: 'success'})
+}

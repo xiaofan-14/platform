@@ -4,33 +4,44 @@ set -e  # 遇到错误立即退出
 
 echo '开始安装Agent'
 
-# 获取下载基础URL
-# 优先级: 命令行参数 > 环境变量 > 自动检测
-if [ -n "$1" ]; then
-  BASE_URL="$1"
-elif [ -n "$BASE_URL" ]; then
-  # 使用环境变量
-  :
+# 获取服务器URL和设备ID
+# 优先级: 环境变量 > 命令行参数 > 自动检测
+if [ -n "$AGENT_SERVER_URL" ]; then
+  SERVER_URL="$AGENT_SERVER_URL"
+elif [ -n "$1" ]; then
+  SERVER_URL="$1"
 else
   # 尝试从脚本位置推断（适用于直接下载脚本文件后执行的情况）
   SCRIPT_PATH="${BASH_SOURCE[0]}"
   if [[ "$SCRIPT_PATH" == *"http"* ]]; then
-    BASE_URL="${SCRIPT_PATH%/*}"
+    SERVER_URL="${SCRIPT_PATH%/*}"
+    SERVER_URL="${SERVER_URL%/agent*}"
   else
-    echo "错误: 无法自动检测下载URL"
-    echo "使用方法:"
-    echo "  curl -sSL https://your-domain.com/agent/install.sh | bash -s https://your-domain.com/agent"
-    echo "  或"
-    echo "  BASE_URL=https://your-domain.com/agent bash <(curl -sSL https://your-domain.com/agent/install.sh)"
+    echo "错误: 无法自动检测服务器URL"
+    echo "请设置环境变量:"
+    echo "  AGENT_SERVER_URL=https://your-domain.com AGENT_DEVICE_ID=device-id bash <(curl -sSL https://your-domain.com/agent/install.sh)"
     exit 1
   fi
 fi
+
+# 获取设备ID
+if [ -z "$AGENT_DEVICE_ID" ]; then
+  echo "错误: 未设置设备ID"
+  echo "请设置环境变量 AGENT_DEVICE_ID"
+  echo "例如: AGENT_SERVER_URL=https://your-domain.com AGENT_DEVICE_ID=device-id bash <(curl -sSL https://your-domain.com/agent/install.sh)"
+  exit 1
+fi
+
+DEVICE_ID="$AGENT_DEVICE_ID"
+BASE_URL="${SERVER_URL}/agent"
 
 # 确保 BASE_URL 以 / 结尾（如果是 URL）
 if [[ "$BASE_URL" == *"http"* ]] && [[ "$BASE_URL" != *"/" ]]; then
   BASE_URL="${BASE_URL}/"
 fi
 
+echo "服务器地址: $SERVER_URL"
+echo "设备ID: $DEVICE_ID"
 echo "下载地址: $BASE_URL"
 
 # 检测操作系统
@@ -97,7 +108,8 @@ echo "开始执行Agent..."
 
 # 立即执行一次
 echo "执行Agent..."
-./"$BINARY_NAME"
+# 通过环境变量传递服务器URL和设备ID
+AGENT_SERVER_URL="$SERVER_URL" AGENT_DEVICE_ID="$DEVICE_ID" ./"$BINARY_NAME"
 
 # 获取可执行文件的绝对路径
 BINARY_PATH="$(pwd)/$BINARY_NAME"
@@ -122,6 +134,8 @@ After=network.target
 
 [Service]
 Type=simple
+Environment="AGENT_SERVER_URL=${SERVER_URL}"
+Environment="AGENT_DEVICE_ID=${DEVICE_ID}"
 ExecStart=${BINARY_PATH}
 Restart=always
 RestartSec=5
@@ -159,7 +173,7 @@ EOF
 
 case "\$1" in
   start)
-    ${BINARY_PATH} &
+    AGENT_SERVER_URL="${SERVER_URL}" AGENT_DEVICE_ID="${DEVICE_ID}" ${BINARY_PATH} &
     echo \$! > /var/run/${SERVICE_NAME}.pid
     ;;
   stop)
@@ -217,6 +231,13 @@ EOF
   <array>
     <string>${BINARY_PATH}</string>
   </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>AGENT_SERVER_URL</key>
+    <string>${SERVER_URL}</string>
+    <key>AGENT_DEVICE_ID</key>
+    <string>${DEVICE_ID}</string>
+  </dict>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>

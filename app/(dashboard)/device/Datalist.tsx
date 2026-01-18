@@ -46,6 +46,7 @@ export default function Datalist() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [openDownloadDialog, setOpenDownloadDialog] = useState(false);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   // 使用 Map 存储每个设备的定时器，避免内存泄漏
   const timersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
@@ -209,8 +210,18 @@ export default function Datalist() {
     }
   }, [startPolling]);
 
+  const handleOpenDownloadDialog = (deviceId: string) => {
+    setSelectedDeviceId(deviceId);
+    setOpenDownloadDialog(true);
+    setError(null);
+    setSuccess(null);
+  };
+
   const handleCloseDownloadDialog = () => {
     setOpenDownloadDialog(false);
+    setSelectedDeviceId(null);
+    setError(null);
+    setSuccess(null);
   };
 
   // 组件挂载时获取设备列表
@@ -260,14 +271,6 @@ export default function Datalist() {
             size='small'
           >
             注册设备
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<DownloadIcon/>}
-            onClick={() => setOpenDownloadDialog(true)}
-            size='small'
-          >
-            安装Agent
           </Button>
         </Box>
       </Box>
@@ -351,13 +354,24 @@ export default function Datalist() {
                     />
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEdit(device.id)}
-                      color="primary"
-                    >
-                      <EditIcon/>
-                    </IconButton>
+                    <Box sx={{display: 'flex', gap: 1, justifyContent: 'flex-end'}}>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenDownloadDialog(device.id)}
+                        color="primary"
+                        title="安装Agent"
+                      >
+                        <DownloadIcon fontSize="small"/>
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleEdit(device.id)}
+                        color="primary"
+                        title="编辑设备"
+                      >
+                        <EditIcon fontSize="small"/>
+                      </IconButton>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))
@@ -414,7 +428,14 @@ export default function Datalist() {
       </Dialog>
 
       <Dialog open={openDownloadDialog} onClose={handleCloseDownloadDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>安装Agent</DialogTitle>
+        <DialogTitle>
+          安装Agent
+          {selectedDeviceId && (
+            <Typography variant="body2" color="text.secondary" sx={{mt: 1}}>
+              设备ID: {selectedDeviceId}
+            </Typography>
+          )}
+        </DialogTitle>
         <DialogContent>
           <Box sx={{pt: 2}}>
             {/* 通过 location 获取 当前域名，显示一个复制 按钮，
@@ -445,14 +466,14 @@ export default function Datalist() {
                   overflow: 'auto',
                 }}
               >
-                {typeof window !== 'undefined' && `curl -sSL ${window.location.origin}/agent/install.sh | bash -s ${window.location.origin}/agent`}
+                {typeof window !== 'undefined' && selectedDeviceId && `AGENT_SERVER_URL=${window.location.origin} AGENT_DEVICE_ID=${selectedDeviceId} bash -c "$(curl -sSL ${window.location.origin}/agent/install.sh)"`}
               </Box>
               <IconButton
                 size="small"
                 color="primary"
                 onClick={async () => {
-                  if (typeof window !== 'undefined') {
-                    const command = `curl -sSL ${window.location.origin}/agent/install.sh | bash -s ${window.location.origin}/agent`;
+                  if (typeof window !== 'undefined' && selectedDeviceId) {
+                    const command = `AGENT_SERVER_URL=${window.location.origin} AGENT_DEVICE_ID=${selectedDeviceId} bash -c "$(curl -sSL ${window.location.origin}/agent/install.sh)"`;
                     try {
                       await navigator.clipboard.writeText(command);
                       // 复制成功提示
@@ -464,6 +485,7 @@ export default function Datalist() {
                     }
                   }
                 }}
+                disabled={!selectedDeviceId}
                 sx={{
                   border: '1px solid',
                   borderColor: 'divider',
