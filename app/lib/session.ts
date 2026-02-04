@@ -22,6 +22,10 @@ export type SessionUser = {
 
 export type SessionPayload = SessionUser & { expiresAt: string };
 
+/**
+ * 获取session加密key
+ * @returns string
+ */
 function getSessionPassword(): string {
   const secret = process.env.SESSION_SECRET;
   if (!secret || secret.length < 32) {
@@ -30,11 +34,20 @@ function getSessionPassword(): string {
   return secret;
 }
 
+/**
+ * 默认cookie选项
+ * @returns CookieOptions
+ */
 const defaultCookieOptions = {
+  // 仅http请求可访问
   httpOnly: true,
+  // 仅https请求可访问
   secure: process.env.NODE_ENV === "production",
+  // 仅同源请求可访问
   sameSite: "lax" as const,
+  // 最大年龄（过期时间）
   maxAge: SESSION_MAX_AGE_SEC,
+  // 路径
   path: "/",
 };
 
@@ -96,7 +109,7 @@ async function getSessionPayloadByToken(
 /**
  * 获取当前请求的 Session 用户（先 Cookie 取 token，再 Redis → DB 取用户信息）
  */
-export async function getSession(): Promise<SessionUser | null> {
+export async function getUser(): Promise<SessionUser | null> {
   const session = await getSessionCookie();
   const token = session.sessionToken;
   if (!token) return null;
