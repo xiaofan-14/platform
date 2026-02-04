@@ -14,26 +14,42 @@ datasource db {
 }
 
 model User {
-  id          Int       @id @default(autoincrement())
-  username    String    @unique
-  email       String    @unique
-  password    String
-  createdAt   DateTime  @default(now())
+  id           Int       @id @default(autoincrement())
+  username     String    @unique
+  email        String    @unique
+  password     String
+  createdAt    DateTime  @default(now())
   
-  // 软删除相关
-  deletedAt   DateTime?
-  
-  // 1. 标量字段：存储执行删除操作的人的 ID
-  deletedById Int?
-  
-  // 2. 关联字段：指向 User 对象本身
-  // 注意：我们通过 name 给这个关系命名，以便 Prisma 识别
-  deletedBy   User?     @relation("UserDeletions", fields: [deletedById], references: [id])
-  
-  // 3. 反向关联：由于是自引用，需要定义一个人删除了哪些用户
+  // 软删除
+  deletedAt    DateTime?
+  deletedById  Int?
+  deletedBy    User?     @relation("UserDeletions", fields: [deletedById], references: [id])
   deletedUsers User[]    @relation("UserDeletions")
 
+  // 一个用户可以有多个活跃 Session（多端登录）
+  sessions     Session[]
+
   @@map("users")
+}
+
+model Session {
+  id           String   @id @default(cuid()) // 这里的 ID 就是你要存入 Cookie 的随机 sess_id
+  sessionToken String   @unique             // 也可以作为索引字段，双重保险
+  userId       Int
+  expires      DateTime                     // 强过期的硬指标
+
+  // 扩展信息：用于安全审计
+  ipAddress    String?
+  userAgent    String?
+  
+  // 关联用户
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("sessions")
+  @@index([userId]) // 方便查询某个用户的所有设备
 }
 
 // 设备状态枚举

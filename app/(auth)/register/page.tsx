@@ -12,8 +12,10 @@ import {
   Avatar
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {
+  const router = useRouter();
   // 1. 定义表单状态
   const [formData, setFormData] = useState({
     username: '',
@@ -63,6 +65,7 @@ export default function RegisterPage() {
         return;
       }
       setSuccess(true);
+      router.push("/");
     } catch {
       setError('网络错误，请稍后重试');
     } finally {
