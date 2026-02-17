@@ -20,8 +20,8 @@ import { MenuList, type MenuItem } from '@/app/lib/utils/menu';
 const RAIL_WIDTH = 64;
 const DRAWER_WIDTH_EXPANDED = 240;
 const SECONDARY_WIDTH = 260;
-const M3_ITEM_HEIGHT = 56;
-const M3_ITEM_RADIUS = 8;
+const M3_ITEM_HEIGHT = 48;
+const M3_ITEM_RADIUS = 100;
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   Home: <HomeIcon />,
@@ -63,62 +63,94 @@ function NavItem({
       onClick={handleClick}
       selected={isActive}
       sx={{
+        position: 'relative',
         height: M3_ITEM_HEIGHT,
         minHeight: M3_ITEM_HEIGHT,
-        borderRadius: M3_ITEM_RADIUS,
+        width: railCollapsed ? M3_ITEM_HEIGHT : 'auto',
+        minWidth: railCollapsed ? M3_ITEM_HEIGHT : undefined,
         mx: 1,
         mb: 0.5,
         justifyContent: railCollapsed ? 'center' : 'flex-start',
         pl: railCollapsed ? 0 : 2,
         pr: railCollapsed ? 0 : 1,
         overflow: 'hidden',
-        ...((isParentActive || isExpanded) &&
-          !isActive && {
-            bgcolor: 'action.selected',
-          }),
-        '&.Mui-selected': {
-          bgcolor: 'primary.main',
-          color: 'primary.contrastText',
-          '&:hover': { bgcolor: 'primary.dark' },
+        bgcolor: 'transparent',
+        '& .nav-item-bg': {
+          ...((isParentActive || isExpanded) &&
+            !isActive && {
+              bgcolor: 'action.selected',
+            }),
         },
-        '&:hover': {
+        '&.Mui-selected .nav-item-bg': {
+          bgcolor: 'primary.main',
+        },
+        '&:hover .nav-item-bg': {
           bgcolor: 'action.hover',
+        },
+        '&.Mui-selected:hover .nav-item-bg': {
+          bgcolor: 'primary.dark',
+        },
+        '&.Mui-selected': {
+          color: 'primary.contrastText',
         },
       }}
     >
-      {Icon && (
-        <Box sx={{ display: 'flex', flexShrink: 0, mr: railCollapsed ? 0 : 1.5 }}>
-          {Icon}
-        </Box>
-      )}
-      {!railCollapsed && (
-        <>
-          <ListItemText
-            primary={item.label}
-            primaryTypographyProps={{
-              variant: 'body2',
-              fontWeight: isActive || isParentActive ? 600 : 500,
-              noWrap: true,
-            }}
-          />
-          {hasChildren && (
-            <Box
-              sx={{
-                color: isExpanded ? 'inherit' : 'text.secondary',
-                transition: 'transform 0.2s',
-                transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+      {/* 背景层：仅做宽度动画，从左到右展开 / 从右到左收回，圆角固定 24px 避免椭圆 */}
+      <Box
+        className="nav-item-bg"
+        sx={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          height: M3_ITEM_HEIGHT,
+          width: railCollapsed ? M3_ITEM_HEIGHT : '100%',
+          borderRadius: M3_ITEM_HEIGHT / 2,
+          bgcolor: 'transparent',
+          transition: 'width 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          zIndex: 0,
+        }}
+      />
+      <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', width: '100%' }}>
+        {Icon && (
+          <Box sx={{ display: 'flex', flexShrink: 0, mr: railCollapsed ? 0 : 1.5 }}>
+            {Icon}
+          </Box>
+        )}
+        {!railCollapsed && (
+          <>
+            <ListItemText
+              primary={item.label}
+              primaryTypographyProps={{
+                variant: 'body2',
+                fontWeight: isActive || isParentActive ? 600 : 500,
+                noWrap: true,
               }}
-            >
-              <ExpandMoreIcon fontSize="small" />
-            </Box>
-          )}
-        </>
-      )}
+            />
+            {hasChildren && (
+              <Box
+                sx={{
+                  color: isExpanded ? 'inherit' : 'text.secondary',
+                  transition: 'transform 0.2s',
+                  transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                }}
+              >
+                <ExpandMoreIcon fontSize="small" />
+              </Box>
+            )}
+          </>
+        )}
+      </Box>
     </ListItemButton>
   );
 
   return (
-    <ListItem disablePadding sx={{ display: 'block' }}>
+    <ListItem
+      disablePadding
+      sx={{
+        display: 'flex',
+        justifyContent: railCollapsed ? 'center' : 'flex-start',
+      }}
+    >
       {content}
     </ListItem>
   );
