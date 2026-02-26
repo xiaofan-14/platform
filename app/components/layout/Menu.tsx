@@ -70,8 +70,8 @@ function NavItem({
         minWidth: railCollapsed ? M3_ITEM_HEIGHT : undefined,
         mx: 1,
         mb: 0.5,
-        justifyContent: railCollapsed ? 'center' : 'flex-start',
-        pl: railCollapsed ? 0 : 2,
+        justifyContent: 'flex-start',
+        pl: railCollapsed ? 0 : 3,
         pr: railCollapsed ? 0 : 1,
         overflow: 'hidden',
         bgcolor: 'transparent',
@@ -110,7 +110,17 @@ function NavItem({
           zIndex: 0,
         }}
       />
-      <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', width: '100%' }}>
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          width: railCollapsed ? M3_ITEM_HEIGHT : '100%',
+          minWidth: railCollapsed ? M3_ITEM_HEIGHT : undefined,
+          justifyContent: railCollapsed ? 'center' : 'flex-start',
+        }}
+      >
         {Icon && (
           <Box sx={{ display: 'flex', flexShrink: 0, mr: railCollapsed ? 0 : 1.5 }}>
             {Icon}
